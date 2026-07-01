@@ -22,6 +22,9 @@ const MOCK_REPORTS = [
     status: "OPEN",
     incidentDate: "2026-06-28",
     createdAt: "2026-06-28T14:32:00Z",
+    location: "Bonny-Bodo Road, Rivers",
+    narrative: "Two armed men on a motorcycle robbed commuters near the junction. One was reported to be carrying a firearm. Avoid the area.",
+    latitude: 4.4515, longitude: 7.1699,
   },
   {
     incidentRef: "INC-2026-0019",
@@ -31,6 +34,9 @@ const MOCK_REPORTS = [
     status: "REPORTED",
     incidentDate: "2026-06-25",
     createdAt: "2026-06-25T08:15:00Z",
+    location: "Forcados Terminal, Delta",
+    narrative: "Peaceful community demonstration over local employment. Road access partially blocked. Monitoring situation.",
+    latitude: 5.3500, longitude: 5.3500,
   },
 ];
 
@@ -118,6 +124,34 @@ export async function sendSOSAlert(payload: SOSPayload) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "SOS dispatch failed");
   return data as { incidentRef: string; dispatched: boolean };
+}
+
+// ── Community broadcast (radius alert) ────────────────────────────────────────
+
+export type BroadcastPayload = {
+  category: string;
+  radiusKm: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  location?: string | null;
+  note?: string | null;
+  reporterName?: string | null;
+};
+
+export async function sendBroadcast(payload: BroadcastPayload) {
+  if (MOCK) {
+    await new Promise(r => setTimeout(r, 1000));
+    return { incidentRef: "BRD-2026-" + Date.now().toString().slice(-4), notified: Math.floor(Math.random() * 40) + 8 };
+  }
+  const token = await SecureStore.getItemAsync("sentinel_token");
+  const res = await fetch(`${BASE_URL}/api/incidents/broadcast`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Broadcast failed");
+  return data as { incidentRef: string; notified: number };
 }
 
 // ── Safety scan — nearby incidents ────────────────────────────────────────────

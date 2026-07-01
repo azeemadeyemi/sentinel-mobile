@@ -55,6 +55,18 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        {/* Broadcast quick action */}
+        <TouchableOpacity style={s.broadcast} activeOpacity={0.9} onPress={() => router.push("/broadcast")}>
+          <View style={s.broadcastIcon}>
+            <Ionicons name="megaphone" size={22} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.broadcastTitle}>Broadcast an alert</Text>
+            <Text style={s.broadcastSub}>Warn people near you within seconds</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+        </TouchableOpacity>
+
         <Text style={s.sectionLabel}>What are you reporting?</Text>
         <View style={s.grid}>
           {results.map(cat => (
@@ -108,6 +120,16 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   searchInput: { flex: 1, color: c.text, fontSize: 15, paddingVertical: 14 },
 
   scroll: { paddingHorizontal: 20, paddingTop: 14 },
+
+  broadcast: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: c.red, borderRadius: 18, padding: 16, marginBottom: 22,
+    shadowColor: c.red, shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 6,
+  },
+  broadcastIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
+  broadcastTitle: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  broadcastSub: { color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 2 },
+
   sectionLabel: { color: c.faint, fontSize: 11, fontWeight: "700", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 14 },
 
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 },
