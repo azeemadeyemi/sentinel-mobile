@@ -325,7 +325,7 @@ export default function SafetyScreen() {
           {/* Advice */}
           <View style={[styles.adviceCard, { borderColor: SCORE_COLOR + "40", backgroundColor: SCORE_COLOR + "0f" }]}>
             <Text style={[styles.adviceTitle, { color: SCORE_COLOR }]}>
-              {safetyScore >= 80 ? "Area appears clear" : safetyScore >= 55 ? "Exercise caution" : "Elevated risk — stay vigilant"}
+              {safetyScore >= 80 ? "Area appears clear" : safetyScore >= 55 ? "Exercise caution" : "Elevated risk, stay vigilant"}
             </Text>
             <Text style={styles.adviceText}>
               {safetyScore >= 80

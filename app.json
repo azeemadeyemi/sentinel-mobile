@@ -6,7 +6,7 @@
     "scheme": "sentinel",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#051205",
     "ios": {
       "supportsTablet": false,
@@ -50,7 +50,8 @@
         {
           "photosPermission": "Sentinel needs photo library access to attach evidence images."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "extra": {
       "API_BASE_URL": "http://192.168.1.100:3001",

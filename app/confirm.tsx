@@ -1,144 +1,90 @@
+import { useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { colors, spacing, radius, shadow } from "@/src/constants/theme";
+import { useTheme, glow, type Palette } from "@/src/theme";
 
 export default function ConfirmScreen() {
   const router = useRouter();
   const { ref } = useLocalSearchParams<{ ref: string }>();
+  const c = useTheme();
+  const g = glow(c);
+  const s = useMemo(() => makeStyles(c), [c.isDark]);
 
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+    <View style={s.root}>
+      <StatusBar barStyle={c.isDark ? "light-content" : "dark-content"} backgroundColor={c.bg} />
+      <LinearGradient colors={g.colors} locations={g.locations} style={s.glow} />
 
-      {/* Green top accent */}
-      <View style={styles.topBar} />
-
-      <View style={styles.content}>
-
-        {/* Success icon */}
-        <View style={[styles.iconWrap, shadow.sm]}>
-          <View style={styles.iconCircle}>
-            <Text style={styles.checkMark}>✓</Text>
+      <View style={s.content}>
+        <View style={s.iconWrap}>
+          <View style={s.iconCircle}>
+            <Ionicons name="checkmark" size={44} color="#fff" />
           </View>
         </View>
 
-        <Text style={styles.title}>Report Submitted</Text>
-        <Text style={styles.sub}>
+        <Text style={s.title}>Report Submitted</Text>
+        <Text style={s.sub}>
           Your report has been received by the SIS Operations team and will be reviewed immediately.
         </Text>
 
-        {/* Reference card */}
-        <View style={[styles.refCard, shadow.sm]}>
-          <Text style={styles.refLabel}>REFERENCE NUMBER</Text>
-          <Text style={styles.refValue}>{ref}</Text>
-          <View style={styles.refDivider} />
-          <Text style={styles.refNote}>
-            Keep this reference number for follow-up with SIS Operations.
-          </Text>
+        <View style={s.refCard}>
+          <Text style={s.refLabel}>REFERENCE NUMBER</Text>
+          <Text style={s.refValue}>{ref}</Text>
+          <View style={s.refDivider} />
+          <Text style={s.refNote}>Keep this reference number for follow-up with SIS Operations.</Text>
         </View>
 
-        {/* What happens next */}
-        <View style={[styles.nextCard, shadow.sm]}>
-          <Text style={styles.nextTitle}>What happens next</Text>
-          {[
-            "SIS analyst reviews your report",
-            "Report verified and classified",
-            "Response coordinated if needed",
-          ].map((step, i) => (
-            <View key={i} style={styles.nextRow}>
-              <View style={styles.nextDot}>
-                <Text style={styles.nextDotText}>{i + 1}</Text>
-              </View>
-              <Text style={styles.nextText}>{step}</Text>
+        <View style={s.nextCard}>
+          <Text style={s.nextTitle}>What happens next</Text>
+          {["SIS analyst reviews your report", "Report verified and classified", "Response coordinated if needed"].map((step, i) => (
+            <View key={i} style={s.nextRow}>
+              <View style={s.nextDot}><Text style={s.nextDotText}>{i + 1}</Text></View>
+              <Text style={s.nextText}>{step}</Text>
             </View>
           ))}
         </View>
 
-        {/* Actions */}
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={() => router.replace("/(tabs)/report")}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.primaryBtnText}>Submit Another Report</Text>
+        <TouchableOpacity style={s.primaryBtn} onPress={() => router.replace("/(tabs)")} activeOpacity={0.9}>
+          <Text style={s.primaryBtnText}>Back to Home</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.secondaryBtn, shadow.sm]}
-          onPress={() => router.replace("/(tabs)")}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.secondaryBtnText}>Back to Home</Text>
-        </TouchableOpacity>
-
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: colors.bgSecondary },
-  topBar: { height: 5, backgroundColor: colors.primary },
-
-  content: {
-    flex: 1, padding: spacing.lg, alignItems: "center",
-    justifyContent: "center", gap: spacing.md,
-  },
+const makeStyles = (c: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.bg },
+  glow: { position: "absolute", top: 0, left: 0, right: 0, height: 320 },
+  content: { flex: 1, padding: 24, alignItems: "center", justifyContent: "center", gap: 16 },
 
   iconWrap: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: colors.bg,
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: "center", justifyContent: "center",
+    width: 96, height: 96, borderRadius: 48, backgroundColor: c.card,
+    borderWidth: 1, borderColor: c.cardLine, alignItems: "center", justifyContent: "center", marginBottom: 4,
   },
   iconCircle: {
-    width: 68, height: 68, borderRadius: 34,
-    backgroundColor: colors.primaryLight,
+    width: 72, height: 72, borderRadius: 36, backgroundColor: c.green,
     alignItems: "center", justifyContent: "center",
-  },
-  checkMark: { color: colors.primary, fontSize: 34, fontWeight: "700" },
-
-  title: { color: colors.text, fontSize: 26, fontWeight: "800", textAlign: "center" },
-  sub:   {
-    color: colors.textSecondary, fontSize: 14, textAlign: "center",
-    lineHeight: 22, maxWidth: 300,
+    shadowColor: c.green, shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8,
   },
 
-  refCard: {
-    backgroundColor: colors.bg, borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, alignItems: "center", width: "100%",
-  },
-  refLabel:   { color: colors.textMuted, fontSize: 10, letterSpacing: 2, fontWeight: "700", marginBottom: 8 },
-  refValue:   { color: colors.primary, fontSize: 28, fontWeight: "800" },
-  refDivider: { width: "100%", height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
-  refNote:    { color: colors.textSecondary, fontSize: 12, textAlign: "center", lineHeight: 18 },
+  title: { color: c.text, fontSize: 26, fontWeight: "900", textAlign: "center" },
+  sub: { color: c.muted, fontSize: 14, textAlign: "center", lineHeight: 22, maxWidth: 300 },
 
-  nextCard: {
-    backgroundColor: colors.bg, borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.md, width: "100%", gap: spacing.sm,
-  },
-  nextTitle: { color: colors.text, fontSize: 13, fontWeight: "700", marginBottom: 4 },
-  nextRow:   { flexDirection: "row", alignItems: "center", gap: 10 },
-  nextDot: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center", justifyContent: "center",
-  },
-  nextDotText: { color: colors.primary, fontSize: 11, fontWeight: "800" },
-  nextText:    { color: colors.textSecondary, fontSize: 13, flex: 1 },
+  refCard: { backgroundColor: c.card, borderRadius: 20, borderWidth: 1, borderColor: c.cardLine, padding: 20, alignItems: "center", width: "100%" },
+  refLabel: { color: c.faint, fontSize: 10, letterSpacing: 2, fontWeight: "700", marginBottom: 8 },
+  refValue: { color: c.green, fontSize: 28, fontWeight: "900" },
+  refDivider: { width: "100%", height: 1, backgroundColor: c.cardLine, marginVertical: 12 },
+  refNote: { color: c.muted, fontSize: 12, textAlign: "center", lineHeight: 18 },
 
-  primaryBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.md,
-    paddingVertical: 15, alignItems: "center", width: "100%",
-  },
-  primaryBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  nextCard: { backgroundColor: c.card, borderRadius: 20, borderWidth: 1, borderColor: c.cardLine, padding: 16, width: "100%", gap: 10 },
+  nextTitle: { color: c.text, fontSize: 13, fontWeight: "700", marginBottom: 4 },
+  nextRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  nextDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: c.green + "22", alignItems: "center", justifyContent: "center" },
+  nextDotText: { color: c.green, fontSize: 11, fontWeight: "800" },
+  nextText: { color: c.muted, fontSize: 13, flex: 1 },
 
-  secondaryBtn: {
-    backgroundColor: colors.bg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    paddingVertical: 15, alignItems: "center", width: "100%",
-  },
-  secondaryBtnText: { color: colors.textSecondary, fontSize: 15 },
+  primaryBtn: { backgroundColor: c.orange, borderRadius: 16, paddingVertical: 16, alignItems: "center", width: "100%", marginTop: 4 },
+  primaryBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
 });

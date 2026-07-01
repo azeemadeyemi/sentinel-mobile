@@ -1,30 +1,30 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator,
-  ScrollView, StatusBar, Animated, Dimensions,
+  ScrollView, StatusBar, Image, Animated,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/src/store/auth";
 import { loginUser } from "@/src/api/client";
-
-const { height: SCREEN_H } = Dimensions.get("window");
-const GREEN  = "#15803d";
-const DARK_GREEN = "#0f5f2e";
-const ORANGE = "#ea580c";
-const WHITE  = "#ffffff";
+import { useTheme, glow, type Palette } from "@/src/theme";
 
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const c = useTheme();
+  const g = glow(c);
+  const s = useMemo(() => makeStyles(c), [c.isDark]);
 
-  const [email,      setEmail]      = useState("");
-  const [password,   setPassword]   = useState("");
-  const [error,      setError]      = useState<string | null>(null);
-  const [loading,    setLoading]    = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [pwdVisible, setPwdVisible] = useState(false);
   const [emailFocus, setEmailFocus] = useState(false);
-  const [pwdFocus,   setPwdFocus]   = useState(false);
+  const [pwdFocus, setPwdFocus] = useState(false);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -58,219 +58,150 @@ export default function LoginScreen() {
     }
   }
 
+  const placeholder = c.isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
+
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <StatusBar barStyle="light-content" backgroundColor={DARK_GREEN} />
+    <View style={s.root}>
+      <StatusBar barStyle={c.isDark ? "light-content" : "dark-content"} backgroundColor={c.bg} />
+      <LinearGradient colors={g.colors} locations={g.locations} style={StyleSheet.absoluteFill} />
 
-      {/* ── Top green hero ───────────────────────────────────────────────── */}
-      <View style={styles.hero}>
-        <View style={styles.heroPill}>
-          <View style={styles.pillDot} />
-          <Text style={styles.pillText}>Renaissance Energy · SIS</Text>
-        </View>
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <View style={s.brand}>
+            <View style={s.logoCard}>
+              <Image source={require("@/assets/renaissance-logo.png")} style={s.logo} resizeMode="contain" />
+            </View>
+            <Text style={s.wordmark}>SENTINEL</Text>
+          </View>
 
-        <Text style={styles.heroTitle}>Welcome{"\n"}Back.</Text>
-        <Text style={styles.heroSub}>
-          Sign in to Sentinel — your security{"\n"}intelligence platform.
-        </Text>
+          <Text style={s.title}>Sign in to your account</Text>
+          <Text style={s.subtitle}>Welcome back. Enter your credentials to continue.</Text>
 
-        {/* Curved white bottom edge */}
-        <View style={styles.curve} />
-      </View>
+          {error && (
+            <Animated.View style={[s.errorBox, { transform: [{ translateX: shakeAnim }] }]}>
+              <Ionicons name="alert-circle" size={16} color={c.red} />
+              <Text style={s.errorText}>{error}</Text>
+            </Animated.View>
+          )}
 
-      {/* ── White form ───────────────────────────────────────────────────── */}
-      <ScrollView
-        style={styles.formZone}
-        contentContainerStyle={styles.formContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Error banner */}
-        {error && (
-          <Animated.View
-            style={[styles.errorBox, { transform: [{ translateX: shakeAnim }] }]}
-          >
-            <Text style={styles.errorText}>{error}</Text>
-          </Animated.View>
-        )}
-
-        {/* Email */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Email address</Text>
-          <TextInput
-            style={[styles.input, emailFocus && styles.inputFocused]}
-            value={email}
-            onChangeText={setEmail}
-            onFocus={() => setEmailFocus(true)}
-            onBlur={() => setEmailFocus(false)}
-            placeholder="you@renaissance.com"
-            placeholderTextColor="#b0b8c4"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
-          {emailFocus && <View style={styles.inputBar} />}
-        </View>
-
-        {/* Password */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.pwdWrap}>
+          <View style={[s.inputRow, emailFocus && s.inputRowFocused]}>
+            <Ionicons name="mail-outline" size={20} color={emailFocus ? c.green : c.muted} style={s.inputIcon} />
             <TextInput
-              style={[styles.input, styles.inputPwd, pwdFocus && styles.inputFocused]}
+              style={s.input}
+              value={email}
+              onChangeText={setEmail}
+              onFocus={() => setEmailFocus(true)}
+              onBlur={() => setEmailFocus(false)}
+              placeholder="you@renaissance.com"
+              placeholderTextColor={placeholder}
+              autoCapitalize="none" keyboardType="email-address" autoComplete="email"
+            />
+          </View>
+
+          <View style={[s.inputRow, pwdFocus && s.inputRowFocused]}>
+            <Ionicons name="lock-closed-outline" size={20} color={pwdFocus ? c.green : c.muted} style={s.inputIcon} />
+            <TextInput
+              style={s.input}
               value={password}
               onChangeText={setPassword}
               onFocus={() => setPwdFocus(true)}
               onBlur={() => setPwdFocus(false)}
               placeholder="Enter your password"
-              placeholderTextColor="#b0b8c4"
-              secureTextEntry={!pwdVisible}
-              autoComplete="current-password"
+              placeholderTextColor={placeholder}
+              secureTextEntry={!pwdVisible} autoComplete="current-password"
             />
-            <TouchableOpacity
-              style={styles.eyeBtn}
-              onPress={() => setPwdVisible(v => !v)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={[styles.eyeText, pwdVisible && { color: GREEN }]}>
-                {pwdVisible ? "HIDE" : "SHOW"}
-              </Text>
+            <TouchableOpacity onPress={() => setPwdVisible(v => !v)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name={pwdVisible ? "eye-off-outline" : "eye-outline"} size={20} color={c.muted} />
             </TouchableOpacity>
-            {pwdFocus && <View style={styles.inputBar} />}
           </View>
-        </View>
 
-        {/* Sign In button */}
-        <TouchableOpacity
-          style={[styles.btn, loading && { opacity: 0.7 }]}
-          onPress={handleLogin}
-          disabled={loading}
-          activeOpacity={0.85}
-        >
-          {loading
-            ? <ActivityIndicator color={WHITE} size="small" />
-            : (
-              <View style={styles.btnInner}>
-                <Text style={styles.btnText}>Sign In</Text>
-                <Text style={styles.btnArrow}>→</Text>
+          <TouchableOpacity style={s.forgotWrap} activeOpacity={0.7}>
+            <Text style={s.forgotText}>Forgot password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading} activeOpacity={0.9}>
+            {loading ? <ActivityIndicator color="#fff" size="small" /> : (
+              <View style={s.btnInner}>
+                <Text style={s.btnText}>Sign In</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
               </View>
-            )
-          }
-        </TouchableOpacity>
+            )}
+          </TouchableOpacity>
 
-        <Text style={styles.footer}>
-          Authorised personnel only · Contact your SIS administrator for access
-        </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <TouchableOpacity style={s.bioBtn} activeOpacity={0.8}
+            onPress={() => setError("Biometric sign-in isn't enabled on this device yet.")}>
+            <Ionicons name="finger-print" size={20} color={c.green} />
+            <Text style={s.bioText}>Use biometric login</Text>
+          </TouchableOpacity>
+
+          <View style={s.dividerRow}>
+            <View style={s.dividerLine} />
+            <Text style={s.dividerText}>RESTRICTED ACCESS</Text>
+            <View style={s.dividerLine} />
+          </View>
+          <Text style={s.footer}>
+            Authorised personnel only.{"\n"}Contact your SIS administrator for access.
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
-const HERO_H = SCREEN_H * 0.42;
+const makeStyles = (c: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.bg },
+  flex: { flex: 1 },
+  scroll: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 96, paddingBottom: 48 },
 
-const styles = StyleSheet.create({
-  root:     { flex: 1, backgroundColor: DARK_GREEN },
+  brand: { alignItems: "center", marginBottom: 40 },
+  logoCard: {
+    width: 84, height: 84, borderRadius: 24, backgroundColor: "#fff",
+    alignItems: "center", justifyContent: "center",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3, shadowRadius: 20, elevation: 12, marginBottom: 18,
+  },
+  logo: { width: 66, height: 66 },
+  wordmark: { color: c.text, fontSize: 24, fontWeight: "900", letterSpacing: 8 },
 
-  // Hero
-  hero: {
-    height: HERO_H,
-    backgroundColor: DARK_GREEN,
-    paddingTop: 60,
-    paddingHorizontal: 28,
-    justifyContent: "flex-end",
-    paddingBottom: 52,
-  },
-  heroPill: {
-    flexDirection: "row", alignItems: "center", gap: 7,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    alignSelf: "flex-start",
-    borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6,
-    marginBottom: 24,
-  },
-  pillDot:  { width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#86efac" },
-  pillText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
-
-  heroTitle: {
-    color: WHITE,
-    fontSize: 48,
-    fontWeight: "900",
-    lineHeight: 54,
-    letterSpacing: -1.5,
-    marginBottom: 14,
-  },
-  heroSub: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 14,
-    lineHeight: 22,
-  },
-
-  curve: {
-    position: "absolute",
-    bottom: -1, left: 0, right: 0,
-    height: 36,
-    backgroundColor: WHITE,
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-  },
-
-  // Form
-  formZone:    { flex: 1, backgroundColor: WHITE },
-  formContent: { paddingHorizontal: 28, paddingTop: 20, paddingBottom: 40 },
-
-  field:     { marginBottom: 24 },
-  label:     { color: "#374151", fontSize: 12, fontWeight: "700", letterSpacing: 0.8, marginBottom: 10, textTransform: "uppercase" },
-
-  input: {
-    backgroundColor: "#f4f6f8",
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    fontSize: 15,
-    color: "#111827",
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  inputFocused: {
-    borderColor: GREEN,
-    backgroundColor: "#f0fdf4",
-  },
-  inputPwd: { paddingRight: 64 },
-  inputBar: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    height: 2, backgroundColor: GREEN, borderRadius: 1,
-  },
-
-  pwdWrap:  { position: "relative" },
-  eyeBtn:   { position: "absolute", right: 16, top: 0, bottom: 0, justifyContent: "center" },
-  eyeText:  { color: "#9ca3af", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  title: { color: c.text, fontSize: 26, fontWeight: "800", letterSpacing: -0.5, marginBottom: 8, textAlign: "center" },
+  subtitle: { color: c.muted, fontSize: 14, lineHeight: 21, marginBottom: 28, textAlign: "center" },
 
   errorBox: {
-    backgroundColor: "#fef2f2",
-    borderWidth: 1.5, borderColor: "#fecaca",
-    borderRadius: 12, padding: 14, marginBottom: 20,
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: c.isDark ? "rgba(220,38,38,0.12)" : "#fef2f2",
+    borderWidth: 1, borderColor: c.isDark ? "rgba(248,113,113,0.4)" : "#fecaca",
+    borderRadius: 12, padding: 13, marginBottom: 20,
   },
-  errorText: { color: "#dc2626", fontSize: 13, fontWeight: "600" },
+  errorText: { color: c.red, fontSize: 13, fontWeight: "600", flex: 1 },
+
+  inputRow: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: c.card, borderWidth: 1.5, borderColor: c.cardLine,
+    borderRadius: 16, paddingHorizontal: 16, minHeight: 58, marginBottom: 16,
+  },
+  inputRowFocused: { borderColor: c.green, backgroundColor: c.isDark ? "rgba(34,197,94,0.08)" : "#f0fdf4" },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, color: c.text, fontSize: 15, paddingVertical: 16 },
+
+  forgotWrap: { alignSelf: "flex-end", marginBottom: 24, marginTop: 2 },
+  forgotText: { color: c.green, fontSize: 13, fontWeight: "600" },
 
   btn: {
-    backgroundColor: DARK_GREEN,
-    borderRadius: 16, height: 58,
-    alignItems: "center", justifyContent: "center",
-    marginTop: 8, marginBottom: 32,
-    shadowColor: DARK_GREEN,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
+    backgroundColor: c.orange, borderRadius: 16, height: 58,
+    alignItems: "center", justifyContent: "center", marginBottom: 16,
+    shadowColor: c.orange, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 18, elevation: 10,
   },
   btnInner: { flexDirection: "row", alignItems: "center", gap: 10 },
-  btnText:  { color: WHITE, fontSize: 17, fontWeight: "800", letterSpacing: 0.3 },
-  btnArrow: { color: WHITE, fontSize: 22 },
+  btnText: { color: "#fff", fontSize: 17, fontWeight: "800", letterSpacing: 0.3 },
 
-  footer: {
-    color: "#9ca3af", fontSize: 11,
-    textAlign: "center", lineHeight: 17,
+  bioBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+    borderWidth: 1.5, borderColor: c.cardLine, borderRadius: 16, height: 56, marginBottom: 36,
   },
+  bioText: { color: c.text, fontSize: 15, fontWeight: "700" },
+
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: c.cardLine },
+  dividerText: { color: c.faint, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  footer: { color: c.faint, fontSize: 12, textAlign: "center", lineHeight: 18 },
 });

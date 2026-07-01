@@ -39,7 +39,9 @@ export default function RootLayout() {
   return (
     <AuthContext.Provider value={{ token, user, signIn, signOut }}>
       <StatusBar style="light" backgroundColor={colors.bg} />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#07120c" } }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding" />
         <Stack.Screen name="login" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="confirm" options={{ presentation: "modal" }} />

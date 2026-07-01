@@ -134,8 +134,8 @@ export type NearbyIncident = {
 const MOCK_NEARBY: NearbyIncident[] = [
   { ref: "INC-2026-0021", title: "Armed robbery on Bonny-Bodo road",       dist: "1.2 km", risk: "HIGH",     domain: "SECURITY",  age: "2 days ago"  },
   { ref: "INC-2026-0019", title: "Community protest near Rumuola junction", dist: "2.8 km", risk: "MEDIUM",   domain: "COMMUNITY", age: "5 days ago"  },
-  { ref: "INC-2026-0014", title: "Pipeline vandalism — Eleme axis",         dist: "4.1 km", risk: "HIGH",     domain: "HSE",       age: "1 week ago"  },
-  { ref: "INC-2026-0011", title: "Cult clash — Diobu area",                 dist: "5.5 km", risk: "CRITICAL", domain: "SECURITY",  age: "10 days ago" },
+  { ref: "INC-2026-0014", title: "Pipeline vandalism, Eleme axis",          dist: "4.1 km", risk: "HIGH",     domain: "HSE",       age: "1 week ago"  },
+  { ref: "INC-2026-0011", title: "Cult clash, Diobu area",                  dist: "5.5 km", risk: "CRITICAL", domain: "SECURITY",  age: "10 days ago" },
 ];
 
 export async function getNearbyIncidents(latitude?: number | null, longitude?: number | null) {

@@ -1,127 +1,90 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert, Platform, StatusBar, Image,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { submitReport } from "@/src/api/client";
-import { colors, spacing, radius, shadow } from "@/src/constants/theme";
-
-const DOMAINS = [
-  { key: "SECURITY",  label: "Security",  color: "#dc2626", bg: "#fef2f2" },
-  { key: "COMMUNITY", label: "Community", color: "#2563eb", bg: "#eff6ff" },
-  { key: "HSE",       label: "HSE",       color: "#ca8a04", bg: "#fefce8" },
-  { key: "POLITICAL", label: "Political", color: "#7c3aed", bg: "#f5f3ff" },
-  { key: "MARITIME",  label: "Maritime",  color: "#0d9488", bg: "#f0fdfa" },
-];
+import { CATEGORIES } from "@/src/constants/dark";
+import { useTheme, glow, type Palette } from "@/src/theme";
+import { useLocation } from "@/src/hooks/useLocation";
 
 const SEVERITY = [
-  { key: "LOW",      label: "Low",      color: "#15803d", bg: "#f0fdf4", border: "#bbf7d0" },
-  { key: "MEDIUM",   label: "Medium",   color: "#ca8a04", bg: "#fefce8", border: "#fde68a" },
-  { key: "HIGH",     label: "High",     color: "#ea580c", bg: "#fff7ed", border: "#fed7aa" },
-  { key: "CRITICAL", label: "Critical", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
+  { key: "LOW", label: "Low", color: "#22c55e" },
+  { key: "MEDIUM", label: "Medium", color: "#eab308" },
+  { key: "HIGH", label: "High", color: "#f97316" },
+  { key: "CRITICAL", label: "Critical", color: "#ef4444" },
 ];
 
-type GpsState = "idle" | "requesting" | "captured" | "denied";
-
-function SectionHeader({ label, step }: { label: string; step: number }) {
-  return (
-    <View style={sh.row}>
-      <View style={sh.step}>
-        <Text style={sh.stepText}>{step}</Text>
-      </View>
-      <Text style={sh.label}>{label}</Text>
-    </View>
-  );
-}
-const sh = StyleSheet.create({
-  row:      { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: spacing.md },
-  step:     { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
-  stepText: { color: "#fff", fontSize: 11, fontWeight: "800" },
-  label:    { color: colors.text, fontSize: 15, fontWeight: "700" },
-});
+// Control-centre classification domains. These are what the SIS control
+// centre routes and reports on, so every report must carry one.
+const DOMAINS = [
+  { key: "SECURITY", label: "Security", color: "#ef4444" },
+  { key: "COMMUNITY", label: "Community", color: "#3b82f6" },
+  { key: "HSE", label: "HSE", color: "#eab308" },
+  { key: "POLITICAL", label: "Political", color: "#a855f7" },
+  { key: "MARITIME", label: "Maritime", color: "#14b8a6" },
+];
 
 export default function ReportScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ domain?: string }>();
+  const params = useLocalSearchParams<{ domain?: string; category?: string }>();
+  const c = useTheme();
+  const g = glow(c);
+  const s = useMemo(() => makeStyles(c), [c.isDark]);
+  const { coords, address, status } = useLocation();
 
-  const [gpsState,  setGpsState]  = useState<GpsState>("idle");
-  const [coords,    setCoords]    = useState<{ lat: number; lng: number } | null>(null);
-  const [domain,    setDomain]    = useState(params.domain ?? "");
-  const [severity,  setSeverity]  = useState("MEDIUM");
-  const [title,     setTitle]     = useState("");
+  const category = CATEGORIES.find(x => x.key === params.category);
+
+  const [domain, setDomain] = useState(params.domain ?? category?.domain ?? "SECURITY");
+  const [severity, setSeverity] = useState(category?.risk ?? "MEDIUM");
+  const [title, setTitle] = useState("");
   const [narrative, setNarrative] = useState("");
-  const [location,  setLocation]  = useState("");
-  const [name,      setName]      = useState("");
-  const [contact,   setContact]   = useState("");
-  const [media,     setMedia]     = useState<{ uri: string; type: "photo" | "video" }[]>([]);
-  const [submitting,setSubmitting]= useState(false);
-  const didRequest = useRef(false);
+  const [location, setLocation] = useState("");
+  const [name, setName] = useState("");
+  const [contact, setContact] = useState("");
+  const [media, setMedia] = useState<{ uri: string; type: "photo" | "video" }[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (didRequest.current) return;
-    didRequest.current = true;
-    requestGps();
-  }, []);
-
-  async function requestGps() {
-    setGpsState("requesting");
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") { setGpsState("denied"); return; }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      setGpsState("captured");
-    } catch {
-      setGpsState("denied");
-    }
-  }
+  useEffect(() => { if (address && !location) setLocation(address); }, [address]);
 
   async function pickFromCamera(type: "photo" | "video") {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") { Alert.alert("Permission needed", "Camera access is required."); return; }
+    const { status: perm } = await ImagePicker.requestCameraPermissionsAsync();
+    if (perm !== "granted") { Alert.alert("Permission needed", "Camera access is required."); return; }
     const result = type === "photo"
-      ? await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: false })
+      ? await ImagePicker.launchCameraAsync({ quality: 0.8 })
       : await ImagePicker.launchCameraAsync({ mediaTypes: ["videos"], videoMaxDuration: 60 });
-    if (!result.canceled && result.assets[0]) {
-      setMedia(prev => [...prev, { uri: result.assets[0].uri, type }]);
-    }
+    if (!result.canceled && result.assets[0]) setMedia(prev => [...prev, { uri: result.assets[0].uri, type }]);
   }
 
   async function pickFromLibrary() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert("Permission needed", "Photo library access is required."); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"], allowsMultipleSelection: true, quality: 0.8,
-    });
+    const { status: perm } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm !== "granted") { Alert.alert("Permission needed", "Photo library access is required."); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], allowsMultipleSelection: true, quality: 0.8 });
     if (!result.canceled) {
-      const picked = result.assets.map(a => ({
-        uri: a.uri,
-        type: (a.type === "video" ? "video" : "photo") as "photo" | "video",
-      }));
-      setMedia(prev => [...prev, ...picked]);
+      setMedia(prev => [...prev, ...result.assets.map(a => ({ uri: a.uri, type: (a.type === "video" ? "video" : "photo") as "photo" | "video" }))]);
     }
   }
 
   async function handleSubmit() {
-    if (!domain)           { Alert.alert("Required", "Select the type of incident."); return; }
-    if (!title.trim())     { Alert.alert("Required", "Enter a brief title."); return; }
+    if (!title.trim()) { Alert.alert("Required", "Enter a brief title."); return; }
     if (!narrative.trim()) { Alert.alert("Required", "Describe what happened."); return; }
     setSubmitting(true);
     try {
       const result = await submitReport({
-        domain, riskBand: severity,
+        domain,
+        riskBand: severity,
         title: title.trim(), narrative: narrative.trim(),
         incidentDate: new Date().toISOString().slice(0, 10),
         incidentTime: new Date().toTimeString().slice(0, 5),
         hub: "EAST",
         location: location.trim() || null,
-        latitude:  coords?.lat ?? null,
-        longitude: coords?.lng ?? null,
-        reporterName:    name.trim()    || null,
-        reporterContact: contact.trim() || null,
+        latitude: coords?.lat ?? null, longitude: coords?.lng ?? null,
+        reporterName: name.trim() || null, reporterContact: contact.trim() || null,
       });
       router.push({ pathname: "/confirm", params: { ref: result.incidentRef } });
     } catch (e: unknown) {
@@ -131,339 +94,212 @@ export default function ReportScreen() {
     }
   }
 
+  const ph = c.isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
+
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+    <View style={s.root}>
+      <StatusBar barStyle={c.isDark ? "light-content" : "dark-content"} backgroundColor={c.bg} />
+      <LinearGradient colors={g.colors} locations={g.locations} style={s.glow} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.livePill}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
+      <View style={s.header}>
+        <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={22} color={c.text} />
+        </TouchableOpacity>
+        <View style={s.headerCat}>
+          {category && (
+            <View style={[s.catIcon, { backgroundColor: category.color + "22" }]}>
+              <Ionicons name={category.icon as any} size={20} color={category.color} />
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerTitle}>{category?.label ?? "Report Incident"}</Text>
+            <Text style={s.headerSub}>{category?.desc ?? "Sent directly to SIS Operations"}</Text>
           </View>
         </View>
-        <Text style={styles.headerTitle}>Report Incident</Text>
-        <Text style={styles.headerSub}>Sent directly to SIS Operations</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-
-        {/* 1. Location */}
-        <View style={[styles.card, shadow.sm]}>
-          <SectionHeader label="Location" step={1} />
-
-          {gpsState === "idle" && (
-            <TouchableOpacity style={styles.gpsBtn} onPress={requestGps} activeOpacity={0.8}>
-              <Text style={styles.gpsBtnText}>Detect my GPS location</Text>
-            </TouchableOpacity>
-          )}
-          {gpsState === "requesting" && (
-            <View style={styles.gpsRow}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.gpsRowText}>Detecting location…</Text>
-            </View>
-          )}
-          {gpsState === "captured" && coords && (
-            <View style={styles.gpsCaptured}>
-              <View style={styles.gpsSuccessDot} />
-              <Text style={styles.gpsCapturedText} numberOfLines={1}>
-                {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
-              </Text>
-              <TouchableOpacity onPress={requestGps}>
-                <Text style={styles.gpsRetry}>Retry</Text>
+      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {/* Classification domain (feeds the control centre) */}
+        <Text style={s.label}>Incident category</Text>
+        <View style={s.domainWrap}>
+          {DOMAINS.map(d => {
+            const active = domain === d.key;
+            return (
+              <TouchableOpacity
+                key={d.key}
+                style={[s.domainChip, { borderColor: active ? d.color : c.cardLine, backgroundColor: active ? d.color + "1f" : c.card }]}
+                onPress={() => setDomain(d.key)}
+                activeOpacity={0.8}
+              >
+                <View style={[s.domainDot, { backgroundColor: active ? d.color : c.faint }]} />
+                <Text style={[s.domainLabel, { color: active ? d.color : c.muted }]}>{d.label}</Text>
               </TouchableOpacity>
-            </View>
-          )}
-          {gpsState === "denied" && (
-            <View style={styles.gpsDenied}>
-              <Text style={styles.gpsDeniedText}>
-                GPS denied — enter location manually below
-              </Text>
-            </View>
-          )}
-
-          <TextInput
-            style={[styles.input, { marginTop: spacing.sm }]}
-            value={location}
-            onChangeText={setLocation}
-            placeholder="Community / landmark / road name"
-            placeholderTextColor={colors.textMuted}
-          />
+            );
+          })}
         </View>
 
-        {/* 2. Type */}
-        <View style={[styles.card, shadow.sm]}>
-          <SectionHeader label="Type of Incident" step={2} />
-          <View style={styles.domainGrid}>
-            {DOMAINS.map(d => {
-              const active = domain === d.key;
-              return (
-                <TouchableOpacity
-                  key={d.key}
-                  style={[
-                    styles.domainBtn,
-                    { backgroundColor: active ? d.bg : colors.bgSecondary, borderColor: active ? d.color : colors.border },
-                  ]}
-                  onPress={() => setDomain(d.key)}
-                  activeOpacity={0.75}
-                >
-                  <View style={[styles.domainDot, { backgroundColor: d.color, opacity: active ? 1 : 0.4 }]} />
-                  <Text style={[styles.domainLabel, { color: active ? d.color : colors.textSecondary }]}>
-                    {d.label}
-                  </Text>
+        {/* Location */}
+        <Text style={s.label}>Location</Text>
+        <View style={s.locCard}>
+          <Ionicons name="location" size={18} color={c.green} />
+          <Text style={s.locText} numberOfLines={1}>
+            {status === "loading" ? "Detecting your location..." : status === "denied" ? "Location unavailable" : address ?? "Located"}
+          </Text>
+          {coords && <View style={s.gpsBadge}><Text style={s.gpsBadgeText}>GPS</Text></View>}
+        </View>
+        <TextInput
+          style={s.input} value={location} onChangeText={setLocation}
+          placeholder="Community / landmark / road name" placeholderTextColor={ph}
+        />
+
+        {/* What happened */}
+        <Text style={s.label}>What happened</Text>
+        <TextInput
+          style={s.input} value={title} onChangeText={setTitle}
+          placeholder="Brief title, e.g. Armed robbery on Bonny road" placeholderTextColor={ph} maxLength={200}
+        />
+        <TextInput
+          style={[s.input, s.textarea]} value={narrative} onChangeText={setNarrative}
+          placeholder="Full description. Include who, what, vehicles, weapons, direction of travel, number of people involved."
+          placeholderTextColor={ph} multiline numberOfLines={5} textAlignVertical="top"
+        />
+
+        {/* Severity */}
+        <Text style={s.label}>Severity</Text>
+        <View style={s.severityRow}>
+          {SEVERITY.map(sv => {
+            const active = severity === sv.key;
+            return (
+              <TouchableOpacity
+                key={sv.key}
+                style={[s.sevBtn, { borderColor: active ? sv.color : c.cardLine, backgroundColor: active ? sv.color + "1f" : c.card }]}
+                onPress={() => setSeverity(sv.key)} activeOpacity={0.8}
+              >
+                <View style={[s.sevDot, { backgroundColor: active ? sv.color : c.faint }]} />
+                <Text style={[s.sevLabel, { color: active ? sv.color : c.muted }]}>{sv.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Evidence */}
+        <Text style={s.label}>Evidence (optional)</Text>
+        {media.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+            {media.map((m, i) => (
+              <View key={i} style={s.thumbWrap}>
+                <Image source={{ uri: m.uri }} style={s.thumb} />
+                {m.type === "video" && <View style={s.vidTag}><Text style={s.vidTagText}>VID</Text></View>}
+                <TouchableOpacity style={s.thumbX} onPress={() => setMedia(prev => prev.filter((_, j) => j !== i))}>
+                  <Ionicons name="close" size={13} color="#fff" />
                 </TouchableOpacity>
-              );
-            })}
-          </View>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+        <View style={s.mediaRow}>
+          <TouchableOpacity style={s.mediaBtn} onPress={() => pickFromCamera("photo")} activeOpacity={0.8}>
+            <Ionicons name="camera-outline" size={22} color={c.green} />
+            <Text style={s.mediaText}>Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.mediaBtn} onPress={() => pickFromCamera("video")} activeOpacity={0.8}>
+            <Ionicons name="videocam-outline" size={22} color={c.green} />
+            <Text style={s.mediaText}>Video</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.mediaBtn} onPress={pickFromLibrary} activeOpacity={0.8}>
+            <Ionicons name="images-outline" size={22} color={c.green} />
+            <Text style={s.mediaText}>Library</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* 3. What happened */}
-        <View style={[styles.card, shadow.sm]}>
-          <SectionHeader label="What Happened" step={3} />
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Brief title — e.g. Armed robbery on Bonny road"
-            placeholderTextColor={colors.textMuted}
-            maxLength={200}
-          />
-          <TextInput
-            style={[styles.input, styles.textarea]}
-            value={narrative}
-            onChangeText={setNarrative}
-            placeholder={"Full description — include who, what, vehicles, weapons, direction of travel, number of people involved."}
-            placeholderTextColor={colors.textMuted}
-            multiline
-            numberOfLines={5}
-            textAlignVertical="top"
-          />
-        </View>
+        {/* Contact */}
+        <Text style={s.label}>Your contact (optional)</Text>
+        <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor={ph} />
+        <TextInput style={[s.input, { marginTop: 12 }]} value={contact} onChangeText={setContact} placeholder="+234 8XX XXX XXXX or email" placeholderTextColor={ph} keyboardType="phone-pad" />
 
-        {/* 4. Evidence */}
-        <View style={[styles.card, shadow.sm]}>
-          <SectionHeader label="Evidence (Optional)" step={4} />
-          <Text style={styles.cardNote}>Attach photos or video to support your report.</Text>
-
-          {/* Captured media thumbnails */}
-          {media.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScroll}>
-              {media.map((m, i) => (
-                <View key={i} style={styles.thumbWrap}>
-                  <Image source={{ uri: m.uri }} style={styles.thumb} />
-                  {m.type === "video" && (
-                    <View style={styles.videoTag}>
-                      <Text style={styles.videoTagText}>VID</Text>
-                    </View>
-                  )}
-                  <TouchableOpacity
-                    style={styles.thumbRemove}
-                    onPress={() => setMedia(prev => prev.filter((_, j) => j !== i))}
-                  >
-                    <Text style={styles.thumbRemoveText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-
-          {/* Capture buttons */}
-          <View style={styles.mediaButtons}>
-            <TouchableOpacity style={styles.mediaBtn} onPress={() => pickFromCamera("photo")} activeOpacity={0.8}>
-              <Text style={styles.mediaBtnIcon}>📷</Text>
-              <Text style={styles.mediaBtnText}>Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaBtn} onPress={() => pickFromCamera("video")} activeOpacity={0.8}>
-              <Text style={styles.mediaBtnIcon}>🎥</Text>
-              <Text style={styles.mediaBtnText}>Video</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaBtn} onPress={pickFromLibrary} activeOpacity={0.8}>
-              <Text style={styles.mediaBtnIcon}>🖼️</Text>
-              <Text style={styles.mediaBtnText}>Library</Text>
-            </TouchableOpacity>
-          </View>
-
-          {media.length > 0 && (
-            <Text style={styles.mediaCount}>{media.length} file{media.length !== 1 ? "s" : ""} attached</Text>
-          )}
-        </View>
-
-        {/* 5. Severity */}
-        <View style={[styles.card, shadow.sm]}>
-          <SectionHeader label="Severity" step={5} />
-          <View style={styles.severityRow}>
-            {SEVERITY.map(s => {
-              const active = severity === s.key;
-              return (
-                <TouchableOpacity
-                  key={s.key}
-                  style={[
-                    styles.severityBtn,
-                    { borderColor: active ? s.color : colors.border, backgroundColor: active ? s.bg : colors.bg },
-                  ]}
-                  onPress={() => setSeverity(s.key)}
-                  activeOpacity={0.75}
-                >
-                  <View style={[styles.severityDot, { backgroundColor: active ? s.color : colors.border }]} />
-                  <Text style={[styles.severityLabel, { color: active ? s.color : colors.textSecondary }]}>
-                    {s.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* 5. Contact */}
-        <View style={[styles.card, shadow.sm]}>
-          <SectionHeader label="Your Contact (Optional)" step={6} />
-          <Text style={styles.cardNote}>So SIS can follow up with you about this report.</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Your name"
-            placeholderTextColor={colors.textMuted}
-          />
-          <TextInput
-            style={[styles.input, { marginTop: spacing.sm }]}
-            value={contact}
-            onChangeText={setContact}
-            placeholder="+234 8XX XXX XXXX or email"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="phone-pad"
-          />
-        </View>
-
-        <View style={{ height: 110 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* Sticky submit */}
-      <View style={styles.submitBar}>
-        <TouchableOpacity
-          style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
-          onPress={handleSubmit}
-          disabled={submitting}
-          activeOpacity={0.85}
-        >
-          {submitting
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.submitText}>Submit Report to SIS</Text>
-          }
+      <View style={s.submitBar}>
+        <TouchableOpacity style={[s.submitBtn, submitting && { opacity: 0.6 }]} onPress={handleSubmit} disabled={submitting} activeOpacity={0.9}>
+          {submitting ? <ActivityIndicator color="#fff" /> : (
+            <View style={s.submitInner}>
+              <Text style={s.submitText}>Send Report to SIS</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </View>
+          )}
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: colors.bgSecondary },
+const makeStyles = (c: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.bg },
+  glow: { position: "absolute", top: 0, left: 0, right: 0, height: 180 },
 
-  header: {
-    backgroundColor: colors.primary,
-    paddingTop: 52, paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
+  header: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 8 },
+  backBtn: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: c.card,
+    borderWidth: 1, borderColor: c.cardLine, alignItems: "center", justifyContent: "center", marginBottom: 14,
   },
-  headerTop: { flexDirection: "row", marginBottom: spacing.sm },
-  livePill: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: radius.full,
-  },
-  liveDot:   { width: 6, height: 6, borderRadius: 3, backgroundColor: "#86efac" },
-  liveText:  { color: "#d1fae5", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
-  headerTitle: { color: "#fff", fontSize: 24, fontWeight: "800" },
-  headerSub:   { color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 2 },
+  headerCat: { flexDirection: "row", alignItems: "center", gap: 12 },
+  catIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  headerTitle: { color: c.text, fontSize: 22, fontWeight: "900", letterSpacing: -0.3 },
+  headerSub: { color: c.muted, fontSize: 13, marginTop: 2 },
 
-  scroll: { padding: spacing.lg, gap: spacing.md },
+  scroll: { paddingHorizontal: 20, paddingTop: 16 },
+  label: { color: c.faint, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 20, marginBottom: 10 },
 
-  card: {
-    backgroundColor: colors.bg, borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border, padding: spacing.md,
+  locCard: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    backgroundColor: c.card, borderWidth: 1, borderColor: c.cardLine,
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, marginBottom: 12,
   },
-  cardNote: { color: colors.textSecondary, fontSize: 12, marginBottom: spacing.sm, marginTop: -spacing.sm },
+  locText: { color: c.text, fontSize: 14, flex: 1 },
+  gpsBadge: { backgroundColor: c.green + "22", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  gpsBadgeText: { color: c.green, fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
 
   input: {
-    backgroundColor: colors.bgInput,
-    borderWidth: 1.5, borderColor: colors.border,
-    borderRadius: radius.md, paddingHorizontal: spacing.md,
-    paddingVertical: 12, color: colors.text, fontSize: 14,
+    backgroundColor: c.card, borderWidth: 1.5, borderColor: c.cardLine,
+    borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, color: c.text, fontSize: 15,
   },
-  textarea: { minHeight: 110, paddingTop: 12 },
+  textarea: { minHeight: 120, marginTop: 12, paddingTop: 14 },
 
-  gpsBtn: {
-    borderWidth: 1.5, borderColor: colors.primary, borderStyle: "dashed",
-    borderRadius: radius.md, paddingVertical: 13,
-    alignItems: "center", backgroundColor: colors.primaryFaint,
+  domainWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  domainChip: {
+    flexDirection: "row", alignItems: "center", gap: 7,
+    borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10,
   },
-  gpsBtnText:    { color: colors.primary, fontSize: 14, fontWeight: "600" },
-  gpsRow:        { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10 },
-  gpsRowText:    { color: colors.textSecondary, fontSize: 14 },
-  gpsCaptured:   { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 },
-  gpsSuccessDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
-  gpsCapturedText: { color: colors.text, fontSize: 13, flex: 1, fontFamily: "monospace" },
-  gpsRetry:      { color: colors.primary, fontSize: 12, fontWeight: "600" },
-  gpsDenied: {
-    backgroundColor: "#fefce8", borderWidth: 1, borderColor: "#fde68a",
-    borderRadius: radius.md, padding: spacing.sm,
-  },
-  gpsDeniedText: { color: "#92400e", fontSize: 12 },
+  domainDot: { width: 8, height: 8, borderRadius: 4 },
+  domainLabel: { fontSize: 13, fontWeight: "700" },
 
-  domainGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  domainBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    borderWidth: 1.5, borderRadius: radius.full,
-    paddingHorizontal: 14, paddingVertical: 9,
-  },
-  domainDot:   { width: 8, height: 8, borderRadius: 4 },
-  domainLabel: { fontSize: 12, fontWeight: "700" },
+  severityRow: { flexDirection: "row", gap: 8 },
+  sevBtn: { flex: 1, alignItems: "center", gap: 6, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14 },
+  sevDot: { width: 8, height: 8, borderRadius: 4 },
+  sevLabel: { fontSize: 12, fontWeight: "700" },
 
-  severityRow: { flexDirection: "row", gap: spacing.sm },
-  severityBtn: {
-    flex: 1, alignItems: "center", gap: 5,
-    borderWidth: 1.5, borderRadius: radius.md, paddingVertical: 12,
-  },
-  severityDot:   { width: 8, height: 8, borderRadius: 4 },
-  severityLabel: { fontSize: 11, fontWeight: "700" },
+  thumbWrap: { position: "relative", marginRight: 10 },
+  thumb: { width: 84, height: 84, borderRadius: 12, backgroundColor: c.card },
+  vidTag: { position: "absolute", bottom: 4, left: 4, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 3, paddingHorizontal: 4, paddingVertical: 1 },
+  vidTagText: { color: "#fff", fontSize: 8, fontWeight: "700" },
+  thumbX: { position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: c.red, alignItems: "center", justifyContent: "center" },
 
-  mediaScroll:   { marginBottom: spacing.sm },
-  thumbWrap:     { position: "relative", marginRight: spacing.sm },
-  thumb:         { width: 80, height: 80, borderRadius: radius.md, backgroundColor: colors.border },
-  videoTag: {
-    position: "absolute", bottom: 4, left: 4,
-    backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 3,
-    paddingHorizontal: 4, paddingVertical: 1,
-  },
-  videoTagText:  { color: "#fff", fontSize: 8, fontWeight: "700" },
-  thumbRemove: {
-    position: "absolute", top: -6, right: -6,
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: colors.danger, alignItems: "center", justifyContent: "center",
-  },
-  thumbRemoveText: { color: "#fff", fontSize: 13, fontWeight: "700", lineHeight: 20 },
-  mediaButtons: { flexDirection: "row", gap: spacing.sm },
+  mediaRow: { flexDirection: "row", gap: 10 },
   mediaBtn: {
-    flex: 1, flexDirection: "column", alignItems: "center", gap: 4,
-    backgroundColor: colors.bgSecondary, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md, paddingVertical: spacing.md,
+    flex: 1, alignItems: "center", gap: 6, backgroundColor: c.card,
+    borderWidth: 1, borderColor: c.cardLine, borderRadius: 14, paddingVertical: 18,
   },
-  mediaBtnIcon: { fontSize: 22 },
-  mediaBtnText: { color: colors.textSecondary, fontSize: 11, fontWeight: "600" },
-  mediaCount:   { color: colors.primary, fontSize: 12, fontWeight: "600", textAlign: "center", marginTop: spacing.sm },
+  mediaText: { color: c.muted, fontSize: 12, fontWeight: "600" },
 
   submitBar: {
     position: "absolute", bottom: 0, left: 0, right: 0,
-    backgroundColor: colors.bg,
-    borderTopWidth: 1, borderTopColor: colors.border,
-    padding: spacing.md,
-    paddingBottom: Platform.OS === "ios" ? 34 : spacing.md,
-    ...shadow.sm,
+    backgroundColor: c.bgElev, borderTopWidth: 1, borderTopColor: c.cardLine,
+    padding: 16, paddingBottom: Platform.OS === "ios" ? 34 : 16,
   },
-  submitBtn: {
-    backgroundColor: colors.orange, borderRadius: radius.md,
-    paddingVertical: 16, alignItems: "center",
-  },
+  submitBtn: { backgroundColor: c.orange, borderRadius: 16, paddingVertical: 16, alignItems: "center" },
+  submitInner: { flexDirection: "row", alignItems: "center", gap: 10 },
   submitText: { color: "#fff", fontSize: 16, fontWeight: "800" },
 });
