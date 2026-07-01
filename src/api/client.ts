@@ -126,34 +126,6 @@ export async function sendSOSAlert(payload: SOSPayload) {
   return data as { incidentRef: string; dispatched: boolean };
 }
 
-// ── Community broadcast (radius alert) ────────────────────────────────────────
-
-export type BroadcastPayload = {
-  category: string;
-  radiusKm: number;
-  latitude?: number | null;
-  longitude?: number | null;
-  location?: string | null;
-  note?: string | null;
-  reporterName?: string | null;
-};
-
-export async function sendBroadcast(payload: BroadcastPayload) {
-  if (MOCK) {
-    await new Promise(r => setTimeout(r, 1000));
-    return { incidentRef: "BRD-2026-" + Date.now().toString().slice(-4), notified: Math.floor(Math.random() * 40) + 8 };
-  }
-  const token = await SecureStore.getItemAsync("sentinel_token");
-  const res = await fetch(`${BASE_URL}/api/incidents/broadcast`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Broadcast failed");
-  return data as { incidentRef: string; notified: number };
-}
-
 // ── Safety scan — nearby incidents ────────────────────────────────────────────
 
 export type NearbyIncident = {

@@ -45,7 +45,6 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="broadcast" />
         <Stack.Screen name="confirm" options={{ presentation: "modal" }} />
       </Stack>
     </AuthContext.Provider>
