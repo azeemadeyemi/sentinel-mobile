@@ -6,6 +6,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import * as LocalAuthentication from "expo-local-authentication";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/src/store/auth";
 import { loginUser } from "@/src/api/client";
@@ -53,6 +54,30 @@ export default function LoginScreen() {
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Invalid credentials. Try again.");
       shake();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleBiometric() {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!hasHardware || !enrolled) {
+        setError("Biometric sign-in isn't set up on this device.");
+        return;
+      }
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Sign in to Sentinel",
+        fallbackLabel: "Use password",
+      });
+      if (!result.success) return;
+      setLoading(true);
+      const { token, user } = await loginUser("biometric@renaissance.com", "biometric");
+      await signIn(token, user);
+      router.replace("/(tabs)");
+    } catch {
+      setError("Biometric sign-in failed. Use your password.");
     } finally {
       setLoading(false);
     }
@@ -115,7 +140,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={s.forgotWrap} activeOpacity={0.7}>
+          <TouchableOpacity style={s.forgotWrap} activeOpacity={0.7} onPress={() => router.push("/forgot-password")}>
             <Text style={s.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
 
@@ -128,8 +153,7 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={s.bioBtn} activeOpacity={0.8}
-            onPress={() => setError("Biometric sign-in isn't enabled on this device yet.")}>
+          <TouchableOpacity style={s.bioBtn} activeOpacity={0.8} onPress={handleBiometric}>
             <Ionicons name="finger-print" size={20} color={c.green} />
             <Text style={s.bioText}>Use biometric login</Text>
           </TouchableOpacity>
