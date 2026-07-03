@@ -51,7 +51,9 @@
           "photosPermission": "Sentinel needs photo library access to attach evidence images."
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-font",
+      "expo-asset"
     ],
     "extra": {
       "API_BASE_URL": "http://192.168.1.100:3001",
