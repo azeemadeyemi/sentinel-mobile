@@ -95,8 +95,9 @@ const SEV_CONFIG: Record<Severity, { color: string; bg: string; border: string; 
   INFO:     { color: "#22c55e", bg: "#052e16", border: "#14532d", icon: "information-circle", label: "INFO"   },
 };
 
+// Hub vocabulary matches the web/DB (EAST | WEST | NATIONWIDE | OFFSHORE).
 const HUB_LABEL: Record<string, string> = {
-  EAST: "East Hub", WEST: "West Hub", OFFSHORE: "Offshore", NORTH: "North",
+  EAST: "East Hub", WEST: "West Hub", NATIONWIDE: "Nationwide", OFFSHORE: "Offshore",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
