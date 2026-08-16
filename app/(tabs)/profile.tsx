@@ -48,7 +48,7 @@ export default function ProfileScreen() {
           <View style={s.card}>
             {[
               { k: "Organisation", v: "Renaissance Africa Energy" },
-              { k: "Platform", v: "Sentinel SIS" },
+              { k: "Platform", v: "RenWatch SIS" },
               { k: "Hub", v: user?.role === "REPORTER" ? "Field" : "Operations" },
               { k: "Access level", v: ROLE_LABEL[user?.role ?? ""] ?? user?.role ?? "" },
             ].map((row, i, arr) => (
@@ -87,7 +87,7 @@ export default function ProfileScreen() {
             <Ionicons name="log-out-outline" size={18} color={c.red} />
             <Text style={s.signOutText}>Sign out</Text>
           </TouchableOpacity>
-          <Text style={s.version}>Sentinel v1.0 · Restricted · SIS Operations</Text>
+          <Text style={s.version}>RenWatch v1.0 · Restricted · SIS Operations</Text>
         </View>
       </ScrollView>
     </View>

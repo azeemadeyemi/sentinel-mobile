@@ -1,12 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  TouchableOpacity, StatusBar,
+  TouchableOpacity, StatusBar, ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, glow } from "@/src/theme";
+import { getAdvisories } from "@/src/api/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Severity = "CRITICAL" | "WARNING" | "INFO";
@@ -17,76 +18,12 @@ type Advisory = {
   title: string;
   message: string;
   hub: string;
-  area: string;
+  area: string | null;
   issuedBy: string;
   issuedAt: string;  // ISO date string
   validUntil: string | null;
   active: boolean;
 };
-
-// ── Mock data (replace with real API later) ───────────────────────────────────
-const MOCK_ADVISORIES: Advisory[] = [
-  {
-    id: "adv-001",
-    severity: "CRITICAL",
-    title: "Armed Robbery — East-West Road",
-    message: "Armed robbery incidents reported on the Aba–Owerri axis of the East-West Road. Avoid non-essential travel after 18:00hrs. Security escort mandatory for all field movements in this corridor.",
-    hub: "EAST",
-    area: "Aba–Owerri Axis, Rivers State",
-    issuedBy: "SIS Control",
-    issuedAt: "2026-07-02T08:30:00",
-    validUntil: "2026-07-03T06:00:00",
-    active: true,
-  },
-  {
-    id: "adv-002",
-    severity: "WARNING",
-    title: "Community Tension — Ogoni Communities",
-    message: "Heightened community tensions reported across Ogoni communities. Non-essential travel to Bori and surrounding areas is restricted until further notice. All field operations to be cleared with Security Ops 24hrs in advance.",
-    hub: "EAST",
-    area: "Bori, Ogoni, Rivers State",
-    issuedBy: "SIS Control",
-    issuedAt: "2026-07-01T14:00:00",
-    validUntil: null,
-    active: true,
-  },
-  {
-    id: "adv-003",
-    severity: "WARNING",
-    title: "Protest Activity — Warri Refinery",
-    message: "Protest activity reported at the Warri Refinery main gate. Use the alternative access route via Effurun. Expect delays. Monitor situation before approaching the facility.",
-    hub: "WEST",
-    area: "Warri, Delta State",
-    issuedBy: "SIS Control",
-    issuedAt: "2026-07-02T06:15:00",
-    validUntil: "2026-07-02T18:00:00",
-    active: true,
-  },
-  {
-    id: "adv-004",
-    severity: "INFO",
-    title: "Security Escort — Bonny Island",
-    message: "Security escort is now available for all field operations to Bonny Island. Contact Security Ops at least 4 hours before departure to schedule. Do not travel to Bonny without prior clearance.",
-    hub: "OFFSHORE",
-    area: "Bonny Island, Rivers State",
-    issuedBy: "Security Operations",
-    issuedAt: "2026-06-30T09:00:00",
-    validUntil: null,
-    active: true,
-  },
-  {
-    id: "adv-005",
-    severity: "INFO",
-    title: "Curfew Lifted — Ahoada West LGA",
-    message: "The movement restriction in Ahoada West LGA has been lifted effective 07:00hrs today. Normal operations may resume. Security teams remain on alert — report any suspicious activity immediately.",
-    hub: "EAST",
-    area: "Ahoada West, Rivers State",
-    issuedBy: "SIS Control",
-    issuedAt: "2026-07-02T07:00:00",
-    validUntil: null,
-    active: false,
-  },
-];
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SEV_CONFIG: Record<Severity, { color: string; bg: string; border: string; icon: keyof typeof Ionicons.glyphMap; label: string }> = {
@@ -122,7 +59,7 @@ function formatDate(iso: string): string {
 // ── Advisory Card ─────────────────────────────────────────────────────────────
 function AdvisoryCard({ advisory, c }: { advisory: Advisory; c: ReturnType<typeof useTheme> }) {
   const [expanded, setExpanded] = useState(advisory.severity === "CRITICAL");
-  const sev = SEV_CONFIG[advisory.severity];
+  const sev = SEV_CONFIG[advisory.severity] ?? SEV_CONFIG.INFO;
 
   return (
     <TouchableOpacity
@@ -203,20 +140,33 @@ function AdvisoryCard({ advisory, c }: { advisory: Advisory; c: ReturnType<typeo
 export default function AdvisoriesScreen() {
   const c = useTheme();
   const glowProps = glow(c);
+  const [advisories, setAdvisories] = useState<Advisory[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<"ALL" | Severity>("ALL");
 
-  const active   = MOCK_ADVISORIES.filter(a => a.active);
-  const expired  = MOCK_ADVISORIES.filter(a => !a.active);
+  const load = useCallback(async () => {
+    try { setAdvisories((await getAdvisories()) as unknown as Advisory[]); } catch { /* keep last */ }
+  }, []);
+
+  useEffect(() => {
+    load().finally(() => setLoading(false));
+    const timer = setInterval(load, 45_000); // stay current without a manual pull
+    return () => clearInterval(timer);
+  }, [load]);
+
+  const active   = advisories.filter(a => a.active);
+  const expired  = advisories.filter(a => !a.active);
   const criticalCount = active.filter(a => a.severity === "CRITICAL").length;
 
-  const displayed = MOCK_ADVISORIES.filter(a =>
+  const displayed = advisories.filter(a =>
     filter === "ALL" || a.severity === filter
   );
 
-  function onRefresh() {
+  async function onRefresh() {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    await load();
+    setRefreshing(false);
   }
 
   return (
@@ -286,7 +236,11 @@ export default function AdvisoriesScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {displayed.length === 0 ? (
+        {loading ? (
+          <View style={styles.empty}>
+            <ActivityIndicator color={c.green} />
+          </View>
+        ) : displayed.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="megaphone-outline" size={48} color={c.faint} />
             <Text style={[styles.emptyText, { color: c.muted }]}>No advisories</Text>

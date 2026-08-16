@@ -36,7 +36,6 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: "Home", tabBarIcon: ({ color }) => <Ionicons name="home" size={22} color={color} /> }} />
-      <Tabs.Screen name="alerts" options={{ title: "Alerts", tabBarIcon: ({ color }) => <Ionicons name="notifications" size={22} color={color} /> }} />
       <Tabs.Screen
         name="sos"
         options={{
@@ -56,9 +55,6 @@ export default function TabLayout() {
 
       {/* Hidden from the tab bar but still navigable via router.push */}
       <Tabs.Screen name="report" options={{ href: null }} />
-      <Tabs.Screen name="history" options={{ href: null }} />
-      <Tabs.Screen name="safety" options={{ href: null }} />
-      <Tabs.Screen name="scan" options={{ href: null }} />
     </Tabs>
   );
 }

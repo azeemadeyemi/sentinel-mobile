@@ -2,8 +2,9 @@ import { useState, useRef, useMemo } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator,
-  ScrollView, StatusBar, Image, Animated,
+  ScrollView, StatusBar, Animated,
 } from "react-native";
+import { ShieldMark } from "@/src/components/RenWatchLogo";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -68,7 +69,7 @@ export default function LoginScreen() {
         return;
       }
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: "Sign in to Sentinel",
+        promptMessage: "Sign in to RenWatch",
         fallbackLabel: "Use password",
       });
       if (!result.success) return;
@@ -94,9 +95,9 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={s.brand}>
             <View style={s.logoCard}>
-              <Image source={require("@/assets/renaissance-logo.png")} style={s.logo} resizeMode="contain" />
+              <ShieldMark size={52} color={c.green} />
             </View>
-            <Text style={s.wordmark}>SENTINEL</Text>
+            <Text style={s.wordmark}>REN<Text style={{ color: c.green }}>WATCH</Text></Text>
           </View>
 
           <Text style={s.title}>Sign in to your account</Text>

@@ -77,6 +77,7 @@ export default function ReportScreen() {
     try {
       const result = await submitReport({
         domain,
+        incidentType: category?.label ?? undefined,
         riskBand: severity,
         title: title.trim(), narrative: narrative.trim(),
         incidentDate: new Date().toISOString().slice(0, 10),

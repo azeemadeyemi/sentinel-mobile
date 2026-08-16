@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
-import { View, Text, Image, ActivityIndicator, StyleSheet, StatusBar } from "react-native";
+import { View, Text, ActivityIndicator, StyleSheet, StatusBar } from "react-native";
+import { ShieldMark } from "@/src/components/RenWatchLogo";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/src/store/auth";
@@ -26,9 +27,9 @@ export default function SplashScreen() {
 
       <View style={s.center}>
         <View style={s.logoCard}>
-          <Image source={require("@/assets/renaissance-logo.png")} style={s.logo} resizeMode="contain" />
+          <ShieldMark size={58} color={c.green} />
         </View>
-        <Text style={s.wordmark}>SENTINEL</Text>
+        <Text style={s.wordmark}>REN<Text style={{ color: c.green }}>WATCH</Text></Text>
         <Text style={s.tagline}>Security Intelligence System</Text>
       </View>
 

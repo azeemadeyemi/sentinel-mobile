@@ -13,7 +13,7 @@ const { width: SCREEN_W } = Dimensions.get("window");
 
 type Slide = { key: string; title: string; body: string; icon?: string };
 const SLIDES: Slide[] = [
-  { key: "welcome", title: "Welcome to Sentinel", body: "Report incidents, raise alerts, and stay protected. Your security intelligence platform, anywhere, anytime." },
+  { key: "welcome", title: "Welcome to RenWatch", body: "Report incidents, receive advisories, and stay protected. Your security intelligence platform, anywhere, anytime." },
   { key: "report", title: "Report in seconds", body: "Pick a category, confirm your location, and your report reaches SIS Operations instantly.", icon: "flash" },
   { key: "aware", title: "Stay aware", body: "See nearby incidents and a live safety score for your area, and trigger SOS the moment you need help.", icon: "shield-checkmark" },
 ];

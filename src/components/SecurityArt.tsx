@@ -3,7 +3,7 @@ import { SvgXml } from "react-native-svg";
 // Security illustration (two-factor / device shield) sourced from unDraw
 // (free, commercial use, no attribution), recolored to a green monochrome
 // palette so it reads on Sentinel's dark background.
-const XML = `<svg data-name="Layer 1" viewBox="0 0 1100.50064 691.70682" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+const XML = `<svg viewBox="0 0 1100.50064 691.70682" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
  <path d="M1150.25032,388.23743h-1.85859V337.32194a29.4685,29.4685,0,0,0-29.46859-29.46853H1011.05186a29.4685,29.4685,0,0,0-29.46859,29.46853V616.64827a29.46851,29.46851,0,0,0,29.46859,29.46854h107.87128a29.46851,29.46851,0,0,0,29.46859-29.46854V424.47994h1.85859Z" fill="#6ee7b7" transform="translate(-49.74968 -104.14659)"/>
  <path d="M1142.121,339.05342v278.92a22.01111,22.01111,0,0,1-22.01,22.01h-108.39a22.00248,22.00248,0,0,1-22-22.01v-278.92a22.00031,22.00031,0,0,1,22-22h13.15a10.4608,10.4608,0,0,0,9.68,14.4h61.8a10.44027,10.44027,0,0,0,9.67993-14.4H1120.111A22.00894,22.00894,0,0,1,1142.121,339.05342Z" fill="#d1fae5" transform="translate(-49.74968 -104.14659)"/>
  <rect fill="#22c55e" height="34" width="126" x="945.85129" y="355.70682"/>

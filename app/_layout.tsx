@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import * as SecureStore from "expo-secure-store";
+import { getItem, setItem, deleteItem } from "@/src/lib/storage";
+import { registerForPush } from "@/src/lib/push";
 import { AuthContext, AuthUser, TOKEN_KEY, USER_KEY } from "@/src/store/auth";
 import { colors } from "@/src/constants/theme";
 
@@ -13,9 +14,9 @@ export default function RootLayout() {
   useEffect(() => {
     async function restore() {
       try {
-        const t = await SecureStore.getItemAsync(TOKEN_KEY);
-        const u = await SecureStore.getItemAsync(USER_KEY);
-        if (t && u) { setToken(t); setUser(JSON.parse(u)); }
+        const t = await getItem(TOKEN_KEY);
+        const u = await getItem(USER_KEY);
+        if (t && u) { setToken(t); setUser(JSON.parse(u)); registerForPush(); }
       } catch {}
       setReady(true);
     }
@@ -23,14 +24,15 @@ export default function RootLayout() {
   }, []);
 
   async function signIn(t: string, u: AuthUser) {
-    await SecureStore.setItemAsync(TOKEN_KEY, t);
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(u));
+    await setItem(TOKEN_KEY, t);
+    await setItem(USER_KEY, JSON.stringify(u));
     setToken(t); setUser(u);
+    registerForPush();
   }
 
   async function signOut() {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(USER_KEY);
+    await deleteItem(TOKEN_KEY);
+    await deleteItem(USER_KEY);
     setToken(null); setUser(null);
   }
 

@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Sentinel",
+    "name": "RenWatch",
     "slug": "sentinel-mobile",
     "version": "1.0.0",
     "scheme": "sentinel",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#051205",
+    "backgroundColor": "#0b0d0c",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.renaissance.sentinel"
@@ -15,7 +15,7 @@
     "android": {
       "package": "com.renaissance.sentinel",
       "adaptiveIcon": {
-        "backgroundColor": "#051205",
+        "backgroundColor": "#0b0d0c",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
@@ -36,28 +36,36 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Sentinel needs your location to attach coordinates to incident reports."
+          "locationAlwaysAndWhenInUsePermission": "RenWatch needs your location to attach coordinates to incident reports."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Sentinel needs camera access to attach photos to incident reports."
+          "cameraPermission": "RenWatch needs camera access to attach photos to incident reports."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Sentinel needs photo library access to attach evidence images."
+          "photosPermission": "RenWatch needs photo library access to attach evidence images."
         }
       ],
       "expo-audio",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      "expo-notifications",
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "android": { "usesCleartextTraffic": true }
+        }
+      ]
     ],
     "extra": {
-      "API_BASE_URL": "http://192.168.1.100:3001",
-      "MOCK_MODE": true,
+      "API_BASE_URL": "http://192.168.0.15:3000",
+      "MOCK_MODE": false,
       "router": {},
       "eas": {
         "projectId": "31068b1b-ef03-4fa1-b97b-3979ca939ea3"

@@ -34,17 +34,22 @@ export type Category = {
   risk: string;      // default severity
 };
 
+// Operational-security taxonomy for the Niger Delta oil & gas environment.
+// `domain` matches the web/DB Domain enum (SECURITY | COMMUNITY | HSE | POLITICAL
+// | MARITIME); `risk` matches the RiskBand enum; `label` is sent as incidentType.
 export const CATEGORIES: Category[] = [
-  { key: "BANDITRY",    label: "Banditry / attack", desc: "Armed attackers or bandits",  icon: "warning",              color: "#ef4444", domain: "SECURITY",  risk: "HIGH" },
-  { key: "ROBBERY",     label: "Robbery / Theft",   desc: "Mugging or theft in progress", icon: "briefcase-outline",   color: "#f59e0b", domain: "SECURITY",  risk: "HIGH" },
-  { key: "KIDNAPPING",  label: "Kidnapping",        desc: "Person been abducted",         icon: "person-outline",       color: "#f97316", domain: "SECURITY",  risk: "CRITICAL" },
-  { key: "SUSPICIOUS",  label: "Suspicious activity", desc: "Something feels off",        icon: "eye-outline",          color: "#14b8a6", domain: "SECURITY",  risk: "MEDIUM" },
-  { key: "ARMED",       label: "Armed robbery",     desc: "Robbery with weapons",         icon: "skull-outline",        color: "#dc2626", domain: "SECURITY",  risk: "CRITICAL" },
-  { key: "FIRE",        label: "Fire outbreak",     desc: "Fire burning or spreading",    icon: "flame",                color: "#f97316", domain: "HSE",       risk: "HIGH" },
-  { key: "ACCIDENT",    label: "Car accident",      desc: "Road accident or crash",       icon: "car-sport-outline",    color: "#3b82f6", domain: "HSE",       risk: "MEDIUM" },
-  { key: "MEDICAL",     label: "Medical emergency", desc: "Someone needs urgent care",    icon: "medkit-outline",       color: "#22c55e", domain: "HSE",       risk: "HIGH" },
-  { key: "HERDSMEN",    label: "Herdsmen attack",   desc: "Herder-farmer clash",          icon: "leaf-outline",         color: "#84cc16", domain: "COMMUNITY", risk: "HIGH" },
-  { key: "CULT",        label: "Cult activity",     desc: "Cult clash or violence",       icon: "people-outline",       color: "#a855f7", domain: "SECURITY",  risk: "HIGH" },
-  { key: "FLOOD",       label: "Flood / disaster",  desc: "Flooding or natural disaster", icon: "water-outline",        color: "#0ea5e9", domain: "HSE",       risk: "MEDIUM" },
-  { key: "VANDALISM",   label: "Vandalism",         desc: "Property or pipeline damage",  icon: "hammer-outline",       color: "#eab308", domain: "HSE",       risk: "MEDIUM" },
+  { key: "ARMED_ATTACK",   label: "Armed attack / banditry",        desc: "Armed attackers or bandits",        icon: "warning",             color: "#ef4444", domain: "SECURITY",  risk: "CRITICAL" },
+  { key: "KIDNAPPING",     label: "Kidnapping (K&R)",               desc: "Person abducted or held",           icon: "person-remove-outline", color: "#f97316", domain: "SECURITY", risk: "CRITICAL" },
+  { key: "VANDALISM",      label: "Pipeline vandalism / sabotage",  desc: "Damage to pipeline or assets",      icon: "construct-outline",   color: "#eab308", domain: "SECURITY",  risk: "HIGH" },
+  { key: "BUNKERING",      label: "Illegal bunkering / crude theft", desc: "Crude tapping or oil theft",       icon: "flask-outline",       color: "#f59e0b", domain: "SECURITY",  risk: "HIGH" },
+  { key: "ILLEGAL_REFINING", label: "Illegal refining",             desc: "Artisanal / illegal refining site", icon: "flame-outline",       color: "#f97316", domain: "SECURITY",  risk: "HIGH" },
+  { key: "CULT",           label: "Cult / gang violence",           desc: "Cult clash or gang violence",       icon: "people-outline",      color: "#a855f7", domain: "SECURITY",  risk: "HIGH" },
+  { key: "SUSPICIOUS",     label: "Suspicious activity / surveillance", desc: "Recon, loitering, something off", icon: "eye-outline",       color: "#14b8a6", domain: "SECURITY",  risk: "MEDIUM" },
+  { key: "PROTEST",        label: "Community protest / agitation",  desc: "Demonstration or unrest",           icon: "megaphone-outline",   color: "#3b82f6", domain: "COMMUNITY", risk: "HIGH" },
+  { key: "ROADBLOCK",      label: "Restriction of movement / roadblock", desc: "Access blocked or barricaded", icon: "hand-left-outline",   color: "#f59e0b", domain: "COMMUNITY", risk: "HIGH" },
+  { key: "OIL_SPILL",      label: "Oil spill / leak",               desc: "Spill, leak or discharge",          icon: "water-outline",       color: "#0ea5e9", domain: "HSE",       risk: "HIGH" },
+  { key: "FIRE",           label: "Fire / explosion",               desc: "Fire, blast or explosion",          icon: "flame",               color: "#f97316", domain: "HSE",       risk: "HIGH" },
+  { key: "FLOOD",          label: "Flooding / natural hazard",      desc: "Flood or natural hazard",           icon: "rainy-outline",       color: "#0ea5e9", domain: "HSE",       risk: "MEDIUM" },
+  { key: "PIRACY",         label: "Piracy / vessel attack",         desc: "Attack on vessel or waterway",      icon: "boat-outline",        color: "#14b8a6", domain: "MARITIME",  risk: "HIGH" },
+  { key: "POLITICAL",      label: "Political tension / unrest",     desc: "Political friction or threat",      icon: "flag-outline",        color: "#a855f7", domain: "POLITICAL", risk: "MEDIUM" },
 ];
