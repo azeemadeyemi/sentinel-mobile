@@ -77,6 +77,7 @@ export async function submitReport(payload: ReportPayload) {
 export type SOSPayload = {
   latitude?: number | null;
   longitude?: number | null;
+  location?: string | null;   // reverse-geocoded address for a human-readable place
   reporterName?: string;
   reporterContact?: string;
 };

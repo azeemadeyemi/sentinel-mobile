@@ -117,7 +117,7 @@ export default function SosScreen() {
           setState("active");
           Vibration.vibrate([0, 300, 100, 300]);
           stopRecording().then(audioUri => {
-            sendSOSAlert({ latitude: coords?.lat, longitude: coords?.lng, reporterName: user?.name });
+            sendSOSAlert({ latitude: coords?.lat, longitude: coords?.lng, location: address, reporterName: user?.name });
             // audioUri would be uploaded with the alert in a real backend
           });
           return 0;
