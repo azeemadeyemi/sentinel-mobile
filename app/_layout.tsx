@@ -33,6 +33,7 @@ export default function RootLayout() {
   async function signOut() {
     await deleteItem(TOKEN_KEY);
     await deleteItem(USER_KEY);
+    await deleteItem("sentinel_refresh");
     setToken(null); setUser(null);
   }
 
