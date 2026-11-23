@@ -76,6 +76,10 @@ export default function SosScreen() {
   const { coords, address } = useLocation();
 
   const [state, setState] = useState<SOSState>("idle");
+  // Whether the alert actually reached Operations or is held on the device.
+  // Telling someone in duress that help is coming when the alert has not left
+  // their phone is the worst thing this screen could do.
+  const [held, setHeld] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scale = useRef(new Animated.Value(1)).current;
@@ -116,9 +120,12 @@ export default function SosScreen() {
           clearInterval(timerRef.current!);
           setState("active");
           Vibration.vibrate([0, 300, 100, 300]);
-          stopRecording().then(audioUri => {
-            sendSOSAlert({ latitude: coords?.lat, longitude: coords?.lng, location: address, reporterName: user?.name });
+          stopRecording().then(async () => {
             // audioUri would be uploaded with the alert in a real backend
+            const res = await sendSOSAlert({
+              latitude: coords?.lat, longitude: coords?.lng, location: address, reporterName: user?.name,
+            }).catch(() => ({ queued: true as const }));
+            setHeld("queued" in res);
           });
           return 0;
         }
@@ -201,9 +208,11 @@ export default function SosScreen() {
                 <Ionicons name="checkmark" size={64} color="#fff" />
               </View>
             </View>
-            <Text style={s.sentTitle}>Alert Sent Successfully</Text>
+            <Text style={s.sentTitle}>{held ? "Alert Held — No Signal" : "Alert Sent Successfully"}</Text>
             <Text style={s.sentSub}>
-              SIS Operations and your contacts have been notified with your live GPS location and voice note. Stay safe.
+              {held
+                ? "Your alert could not be sent because there is no connection. It is saved and will go out the moment signal returns. If you can, move to higher ground or reach Operations by another means."
+                : "SIS Operations and your contacts have been notified with your live GPS location and voice note. Stay safe."}
             </Text>
             <TouchableOpacity style={s.doneBtn} onPress={reset} activeOpacity={0.9}>
               <Text style={s.doneText}>Done</Text>

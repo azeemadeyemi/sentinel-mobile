@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import { getItem, setItem, deleteItem } from "@/src/lib/storage";
+import { enqueue, flush, queuedCount, type QueuedItem, type SendResult } from "@/src/lib/queue";
 
 const BASE_URL = (Constants.expoConfig?.extra?.API_BASE_URL as string) ?? "http://localhost:3001";
 const MOCK     = (Constants.expoConfig?.extra?.MOCK_MODE as boolean) ?? true;
@@ -73,6 +74,64 @@ async function authFetch(path: string, init: RequestInit = {}): Promise<Response
   return res;
 }
 
+/**
+ * Post a field submission, holding it on the device when the network is the
+ * problem rather than the submission.
+ *
+ * The distinction matters. A 4xx means the server understood and refused, so
+ * retrying forever would never succeed and would hide a real error from the
+ * reporter. A thrown fetch (no signal) or a 5xx might well succeed later, and
+ * in the Delta it usually will, so those are queued.
+ *
+ * Every submission carries a clientId so a resend is recognisable as the same
+ * event. See the duplicate note in the queue module.
+ */
+async function postOrQueue(
+  path: string,
+  kind: "report" | "sos",
+  payload: Record<string, unknown>,
+): Promise<{ queued: true } | Record<string, unknown>> {
+  const body = { clientId: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`, ...payload };
+  try {
+    const res = await authFetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) return (await res.json()) as Record<string, unknown>;
+    if (res.status >= 500) { await enqueue(kind, body); return { queued: true }; }
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { error?: string }).error ?? "Submission failed");
+  } catch (e) {
+    // A thrown Error with a message came from the branch above: a real refusal.
+    if (e instanceof Error && e.message && e.message !== "Network request failed") throw e;
+    await enqueue(kind, body);
+    return { queued: true };
+  }
+}
+
+/** Send everything held on the device. Safe to call often; a no-op when empty. */
+export async function flushOutbox(): Promise<{ sent: number; remaining: number }> {
+  return flush(async (item: QueuedItem): Promise<SendResult> => {
+    const path = item.kind === "sos" ? "/api/incidents/sos" : "/api/incidents/report";
+    try {
+      const res = await authFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item.payload),
+      });
+      if (res.ok) return "sent";
+      // Still refused after 10 tries: keeping it forever helps nobody.
+      if (res.status < 500) return item.attempts >= 10 ? "drop" : "retry";
+      return "retry";
+    } catch {
+      return "retry";
+    }
+  });
+}
+
+export { queuedCount };
+
 // ── Incident reporting ────────────────────────────────────────────────────────
 
 export type ReportPayload = {
@@ -99,14 +158,9 @@ export async function submitReport(payload: ReportPayload) {
     const seq = Math.floor(Math.random() * 50) + 22;
     return { incidentRef: `INC-2026-${String(seq).padStart(4, "0")}`, id: "mock-id" };
   }
-  const res = await authFetch(`/api/incidents/report`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Submission failed");
-  return data as { incidentRef: string; id: string };
+  return postOrQueue("/api/incidents/report", "report", payload as unknown as Record<string, unknown>) as Promise<
+    { incidentRef: string; id: string } | { queued: true }
+  >;
 }
 
 // ── SOS emergency alert ───────────────────────────────────────────────────────
@@ -124,14 +178,11 @@ export async function sendSOSAlert(payload: SOSPayload) {
     await new Promise(r => setTimeout(r, 800));
     return { incidentRef: "INC-2026-SOS-" + Date.now().toString().slice(-4), dispatched: true };
   }
-  const res = await authFetch(`/api/incidents/sos`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...payload, riskBand: "CRITICAL", domain: "SECURITY", status: "SOS" }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "SOS dispatch failed");
-  return data as { incidentRef: string; dispatched: boolean };
+  return postOrQueue("/api/incidents/sos", "sos", {
+    ...payload, riskBand: "CRITICAL", domain: "SECURITY", status: "SOS",
+  } as unknown as Record<string, unknown>) as Promise<
+    { incidentRef: string; dispatched: boolean } | { queued: true }
+  >;
 }
 
 // ── Advisories — control-room broadcasts ──────────────────────────────────────

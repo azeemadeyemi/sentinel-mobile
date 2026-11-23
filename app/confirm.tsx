@@ -7,7 +7,8 @@ import { useTheme, glow, type Palette } from "@/src/theme";
 
 export default function ConfirmScreen() {
   const router = useRouter();
-  const { ref } = useLocalSearchParams<{ ref: string }>();
+  const { ref, queued } = useLocalSearchParams<{ ref: string; queued?: string }>();
+  const held = queued === "1";
   const c = useTheme();
   const g = glow(c);
   const s = useMemo(() => makeStyles(c), [c.isDark]);
@@ -24,17 +25,24 @@ export default function ConfirmScreen() {
           </View>
         </View>
 
-        <Text style={s.title}>Report Submitted</Text>
+        <Text style={s.title}>{held ? "Saved to Send" : "Report Submitted"}</Text>
         <Text style={s.sub}>
-          Your report has been received by the SIS Operations team and will be reviewed immediately.
+          {held
+            ? "There is no connection right now, so your report is saved on this device. It will send on its own as soon as you are back in range."
+            : "Your report has been received by the SIS Operations team and will be reviewed immediately."}
         </Text>
 
-        <View style={s.refCard}>
-          <Text style={s.refLabel}>REFERENCE NUMBER</Text>
-          <Text style={s.refValue}>{ref}</Text>
-          <View style={s.refDivider} />
-          <Text style={s.refNote}>Keep this reference number for follow-up with SIS Operations.</Text>
-        </View>
+        {/* A reference only exists once the server has accepted it. Showing a
+            placeholder would invite someone to quote a number that means
+            nothing to Operations. */}
+        {!held && (
+          <View style={s.refCard}>
+            <Text style={s.refLabel}>REFERENCE NUMBER</Text>
+            <Text style={s.refValue}>{ref}</Text>
+            <View style={s.refDivider} />
+            <Text style={s.refNote}>Keep this reference number for follow-up with SIS Operations.</Text>
+          </View>
+        )}
 
         <View style={s.nextCard}>
           <Text style={s.nextTitle}>What happens next</Text>

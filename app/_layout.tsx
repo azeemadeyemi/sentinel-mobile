@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { getItem, setItem, deleteItem } from "@/src/lib/storage";
 import { registerForPush } from "@/src/lib/push";
+import { flushOutbox } from "@/src/api/client";
 import { AuthContext, AuthUser, TOKEN_KEY, USER_KEY } from "@/src/store/auth";
 import { colors } from "@/src/constants/theme";
 
@@ -22,6 +24,23 @@ export default function RootLayout() {
     }
     restore();
   }, []);
+
+  // Drain the outbox whenever the app is in use: on sign-in, on return to the
+  // foreground, and periodically while open. A queued report that only sends
+  // when the reporter happens to file another one is barely a queue at all.
+  const flushing = useRef(false);
+  useEffect(() => {
+    if (!token) return;
+    const run = async () => {
+      if (flushing.current) return;
+      flushing.current = true;
+      try { await flushOutbox(); } catch {} finally { flushing.current = false; }
+    };
+    run();
+    const sub = AppState.addEventListener("change", (st) => { if (st === "active") run(); });
+    const timer = setInterval(run, 60_000);
+    return () => { sub.remove(); clearInterval(timer); };
+  }, [token]);
 
   async function signIn(t: string, u: AuthUser) {
     await setItem(TOKEN_KEY, t);

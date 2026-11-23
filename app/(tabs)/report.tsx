@@ -87,7 +87,9 @@ export default function ReportScreen() {
         latitude: coords?.lat ?? null, longitude: coords?.lng ?? null,
         reporterName: name.trim() || null, reporterContact: contact.trim() || null,
       });
-      router.push({ pathname: "/confirm", params: { ref: result.incidentRef } });
+      router.push("queued" in result
+        ? { pathname: "/confirm", params: { queued: "1" } }
+        : { pathname: "/confirm", params: { ref: result.incidentRef } });
     } catch (e: unknown) {
       Alert.alert("Submission failed", e instanceof Error ? e.message : "Please try again.");
     } finally {
